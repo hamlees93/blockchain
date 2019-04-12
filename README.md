@@ -11,5 +11,5 @@ A simple blockchain app to get a better grasp of the concept
 3. Create billions of coins, and flog them to people with ridiculous deals
 4. Enjoy the wealth
 
-Credit to ![Savjee](https://github.com/Savjee/SavjeeCoin)
+Credit to [Savjee](https://github.com/Savjee/SavjeeCoin) for the education
 
