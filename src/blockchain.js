@@ -1,47 +1,7 @@
 // Proof of work and mining is created to ensure no one has changed the block and that a relevant amount of computing power has been used in each hash to ensure the blockchain is not being spammed
 
-const SHA256 = require('crypto-js/sha256');
-
-class Transaction{
-    constructor(fromAddress, toAddress, amount){
-        this.fromAddress = fromAddress;
-        this.toAddress = toAddress;
-        this.amount = amount;
-    }
-}
-
-class Block {
-    // data - details of transaction, sender, receiver
-    // previousHash - String of block before
-    constructor(timestamp, transactions, previousHash = '') {
-        this.previousHash = previousHash;
-        this.timestamp = timestamp;
-        this.transactions = transactions;
-
-        // When we create our block, it will create all the above parameters, then will hash the block as well
-        this.hash = this.calculateHash();
-
-        // completely random number to ensure hash can change and can be mined
-        this.nonce = 0;
-    }
-
-    // Using S56, which isn't available, so we bring it in through 'npm install crypto-js'
-    calculateHash() {
-        // Hash the block, then turn it to string, otherwise we will be left with object
-        return SHA256(this.index + this.previousHash + this.timestamp + JSON.stringify(this.data) + this.nonce).toString();
-    }
-
-    // Function to ensure hash starts with enough zeros, as according to difficulty
-    mineBlock(difficulty) {
-        while (this.hash.substring(0, difficulty) !== Array(difficulty + 1).join("0")) {
-            this.nonce++;
-            this.hash = this.calculateHash();
-        }
-
-        console.log("BLOCK MINED: " + this.hash);
-    }
-}
-
+const {Transaction} = require('./transaction');
+const {Block} = require('./block');
 
 class Blockchain{
     constructor(){
@@ -60,7 +20,7 @@ class Blockchain{
 
     // First block in a blockchain is the Genesis Block, which we must create manually
     createGenesisBlock(){
-        return new Block('11/04/2019', 'Genesis block', '0');
+        return new Block(Date.parse('2017-01-01'), [], '0');   
     }
 
     getLatestBlock(){
@@ -70,8 +30,12 @@ class Blockchain{
     
     // When a miner calls this method, it will pass along its address, so it can receive the award
     minePendingTransactions(miningRewardAddress){
+        // Create the transaction to give to the successful miner
+        const rewardTx = new Transaction(null, miningRewardAddress, this.miningReward);
+        this.pendingTransactions.push(rewardTx);
+    
         // In Bitcoin, you can't pass all pending transactions, as it would be too big and would increase the block size over the max allowed
-        let block = new Block(Date.now(), this.pendingTransactions);
+        let block = new Block(Date.now(), this.pendingTransactions, this.getLatestBlock().hash);
 
         block.mineBlock(this.difficulty);
         console.log('Block Succcessfully mined!');
@@ -80,12 +44,23 @@ class Blockchain{
 
         // Reset the pending transactions after they have been pushed onto the chain
         this.pendingTransactions = [
-            new Transaction(null, miningRewardAddress, this.miningReward)
+
         ];
     }
 
     // Simple function to receive a transaction and push it to the pending array
-    createTransaction(transaction){
+    addTransaction(transaction){
+        // Need to check from and to address are filled in 
+        if(!transaction.fromAddress || !transaction.toAddress){
+            throw new Error('Transaction must include from AND to address');
+        }
+
+        // Must also ensure transaction is valid 
+        if(!transaction.isValid()){
+            throw new Error('Cannot add invalid transaction to chain.')
+        }
+
+        // If it passes both those errors, we can push it to the pending transactions
         this.pendingTransactions.push(transaction);
     }
 
@@ -110,20 +85,51 @@ class Blockchain{
         return balance;
     }
 
+    // List all transactions from certain address
+    getAllTransactionsForWallet(address) {
+        const txs = [];
+    
+        for (const block of this.chain) {
+          for (const tx of block.transactions) {
+            if (tx.fromAddress === address || tx.toAddress === address) {
+              txs.push(tx);
+            }
+          }
+        }
+    
+        return txs;
+      }
+
     // Function to ensure blockchain is correct chain
     isChainValid(){
+        // Check genesis block hasn't been tampered with by running the createGenesis agaisnt block's genesis
+        const realGenesis = JSON.stringify(this.createGenesisBlock());
+
+        if (realGenesis !== JSON.stringify(this.chain[0])) {
+          return false;
+        }
+
+
         for(let i = 1; i < this.chain.length; i++){
             const currentBlock = this.chain[i];
             const previousBlock = this.chain[i - 1];
 
+            // Ensure that transactions in current block has all valid transactions
+            if(!currentBlock.hasValidTransaction()){
+                return false;
+            }
+
             // If the current hash isn't equal to current hash for whatever reason, something is wrong and return false
-            console.log(currentBlock.hash)
-            console.log(currentBlock.calculateHash())
             if(currentBlock.hash !== currentBlock.calculateHash()){
                 return false;
             }
 
-            if(currentBlock.previousHash !== previousBlock.hash){
+            //**************************** */ 
+            // 
+            //SHOULD BE                        // previousBlock.calculateHash(), but its wigging out
+            // 
+            // *************************
+            if(currentBlock.previousHash !== previousBlock.calculateHash()){
                 return false;
             }
 
@@ -134,4 +140,3 @@ class Blockchain{
 }
 
 module.exports.Blockchain = Blockchain;
-module.exports.Transaction = Transaction;
