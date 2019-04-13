@@ -1,11 +1,13 @@
 const {Blockchain}= require('./blockchain');
 const {Transaction} = require('./transaction');
+const {User} = require('./users');
 const EC = require('elliptic').ec;
 const ec = new EC('secp256k1');
 
-// Accessing public and private keys
-const myKey = ec.keyFromPrivate('f0d96911cddd3db0783cca11db0f43a7c47d68389fd111cf6cfbe50c922ebcf3');
-const myWalletAddress = myKey.getPublic('hex');
+
+const newUser = new User;
+const myKey = ec.keyFromPrivate(newUser.myKey);
+const myWalletAddress = newUser.walletAddress;
 
 // Create new blockchain and add blocks
 let hamishCoin = new Blockchain();

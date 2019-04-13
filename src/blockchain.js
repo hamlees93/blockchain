@@ -124,11 +124,7 @@ class Blockchain{
                 return false;
             }
 
-            //**************************** */ 
-            // 
-            //SHOULD BE                        // previousBlock.calculateHash(), but its wigging out
-            // 
-            // *************************
+            // If the previousHash attached to the current hash isn't equal to the actual hash, somethings up
             if(currentBlock.previousHash !== previousBlock.calculateHash()){
                 return false;
             }
